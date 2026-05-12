@@ -1,0 +1,9 @@
+{
+  "id": "com.ignacio.radiofuturo",
+  "version": "1.0.0",
+  "vendor": "Ignacio",
+  "type": "web",
+  "main": "index.html",
+  "title": "Radio Futuro",
+  "icon": "icon.png"
+}
