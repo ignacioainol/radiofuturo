@@ -8,6 +8,11 @@ const STREAM_URL =
 radio.src = STREAM_URL;
 
 playBtn.addEventListener("click", async () => {
+  if (!radio.paused) {
+    radio.pause();
+    return;
+  }
+
   try {
     await radio.play();
     statusText.innerText = "Reproduciendo";
@@ -15,6 +20,15 @@ playBtn.addEventListener("click", async () => {
     statusText.innerText = "Error";
     console.error(err);
   }
+});
+
+radio.addEventListener("play", () => {
+  playBtn.textContent = "⏸ Pause";
+});
+
+radio.addEventListener("pause", () => {
+  playBtn.textContent = "▶ Play";
+  statusText.innerText = "Detenido";
 });
 
 radio.addEventListener("error", () => {
