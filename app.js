@@ -4,7 +4,14 @@ const playBtn = document.getElementById("playBtn");
 const nowPlayingText = document.getElementById("nowPlaying");
 
 const STREAM_URL = "https://26663.live.streamtheworld.com/FUTURO_SC";
-const METADATA_URL = "http://localhost:3001/metadata";
+
+// En desarrollo local (npx serve) usamos el proxy local; en la TV / empaquetado
+// usamos el proxy desplegado en Render.
+const isLocal =
+  location.hostname === "localhost" || location.hostname === "127.0.0.1";
+const METADATA_URL = isLocal
+  ? "http://localhost:3001/metadata"
+  : "https://futuro-radio-proxy.onrender.com/metadata";
 
 radio.src = STREAM_URL;
 
