@@ -1,13 +1,34 @@
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   background: black;
   color: white;
-  font-family: Arial;
+  font-family: Arial, sans-serif;
 }
 
-.container {
+/* Layout de dos columnas: player a la izquierda, letra a la derecha */
+.app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+.player {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  margin-top: 120px;
+  padding: 40px;
+}
+
+.player h1 {
+  font-size: 56px;
+  margin: 0 0 4px;
 }
 
 .credits {
@@ -15,20 +36,114 @@ body {
   font-size: 14px;
   font-weight: 700;
   color: #00ff00;
-  margin: -10px 0 30px;
+  margin: 0 0 40px;
   letter-spacing: 2px;
 }
 
 button {
   font-size: 40px;
   padding: 20px 40px;
+  cursor: pointer;
 }
 
-#songTitle {
-  margin-top: 30px;
-  font-size: 28px;
+#status {
+  font-size: 22px;
   color: #aaa;
+  margin-top: 24px;
+}
+
+#nowPlaying {
+  font-size: 26px;
+  color: #fff;
   padding: 0 40px;
+  min-height: 32px;
+}
+
+/* Panel de letra estilo Spotify */
+.lyrics-panel {
+  width: 42%;
+  max-width: 720px;
+  background: linear-gradient(160deg, #1e1e1e 0%, #0d0d0d 100%);
+  border-left: 1px solid #222;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 0 32px 40px;
+}
+
+.lyrics-header {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 18px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #00ff00;
+  margin-bottom: 20px;
+  padding-right: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.offset-hint {
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  letter-spacing: 0;
+  color: #888;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.offset-hint.show {
+  opacity: 1;
+}
+
+/* Contenedor scrollable de la letra */
+.lyrics {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 40px;
+  /* Difuminado arriba y abajo para el efecto Spotify */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 12%, black 88%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, black 12%, black 88%, transparent 100%);
+  scrollbar-width: none;
+}
+
+.lyrics::-webkit-scrollbar {
+  display: none;
+}
+
+.lyrics .line {
+  font-size: 30px;
+  line-height: 1.5;
+  font-weight: 700;
+  color: #5a5a5a;
+  margin: 0 0 14px;
+  transition: color 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
+  transform-origin: left center;
+}
+
+/* Línea que suena ahora */
+.lyrics .line.active {
+  color: #ffffff;
+  transform: scale(1.06);
+}
+
+/* Líneas ya pasadas, un poco más tenues */
+.lyrics .line.past {
+  color: #3f3f3f;
+}
+
+/* Modo letra plana (sin sincronizar): centrado vertical superior, sin escala */
+.lyrics.plain .line {
+  font-size: 26px;
+  color: #cccccc;
+  font-weight: 400;
+  transform: none;
+}
+
+.lyrics-message {
+  font-size: 24px;
+  color: #777;
+  margin-top: 40px;
 }
 
 .hidden {

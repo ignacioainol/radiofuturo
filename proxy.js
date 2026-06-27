@@ -13,7 +13,7 @@ app.use((req, res, next) => {
 });
 
 app.get("/", (req, res) => {
-  res.json({ status: "ok", endpoints: ["/metadata", "/stream/:path"] });
+  res.json({ status: "ok", endpoints: ["/metadata", "/lyrics", "/stream/:path"] });
 });
 
 // Mount de Radio Futuro en la API Now Playing de Triton (la misma fuente que
@@ -37,10 +37,12 @@ app.get("/metadata", (req, res) => {
       const song = pick("cue_title");
       const artist = pick("track_artist_name");
       const cover = pick("track_cover_url");
+      const cueRaw = pick("cue_time_start"); // ms epoch en que arrancó el tema
+      const cueTimeStart = cueRaw ? Number(cueRaw) : null;
       const title = [artist, song].filter(Boolean).join(" - ");
 
       if (!res.headersSent) {
-        res.json({ title: title || "Sin metadatos", artist, song, cover });
+        res.json({ title: title || "Sin metadatos", artist, song, cover, cueTimeStart });
       }
     });
   });
@@ -53,6 +55,65 @@ app.get("/metadata", (req, res) => {
   });
 
   req.on("close", () => apiReq.destroy());
+});
+
+// Letra de la canción vía LRCLIB (gratis, sin API key). Devuelve letra
+// sincronizada (LRC con tiempos) y/o letra plana.
+app.get("/lyrics", (req, res) => {
+  const artist = (req.query.artist || "").toString();
+  const track = (req.query.track || "").toString();
+
+  if (!artist && !track) {
+    return res.json({ syncedLyrics: "", plainLyrics: "" });
+  }
+
+  const opts = {
+    headers: {
+      "User-Agent": "futuro-radio-app (https://github.com/ignacioainol/radiofuturo)"
+    }
+  };
+
+  const fetchJson = (url, cb) => {
+    https
+      .get(url, opts, (r) => {
+        let body = "";
+        r.on("data", (c) => (body += c));
+        r.on("end", () => cb(r.statusCode, body));
+      })
+      .on("error", () => cb(0, ""));
+  };
+
+  const q = `artist_name=${encodeURIComponent(artist)}&track_name=${encodeURIComponent(track)}`;
+
+  // 1) Coincidencia exacta
+  fetchJson(`https://lrclib.net/api/get?${q}`, (status, body) => {
+    if (status === 200) {
+      try {
+        const d = JSON.parse(body);
+        if (d.syncedLyrics || d.plainLyrics) {
+          return res.json({
+            syncedLyrics: d.syncedLyrics || "",
+            plainLyrics: d.plainLyrics || ""
+          });
+        }
+      } catch (e) {}
+    }
+
+    // 2) Fallback: búsqueda (prioriza un resultado con letra sincronizada)
+    fetchJson(`https://lrclib.net/api/search?${q}`, (s2, b2) => {
+      try {
+        const arr = JSON.parse(b2);
+        if (Array.isArray(arr) && arr.length) {
+          const hit = arr.find((x) => x.syncedLyrics) || arr[0];
+          return res.json({
+            syncedLyrics: hit.syncedLyrics || "",
+            plainLyrics: hit.plainLyrics || ""
+          });
+        }
+      } catch (e) {}
+      res.json({ syncedLyrics: "", plainLyrics: "" });
+    });
+  });
 });
 
 app.get("/stream/:path", (req, res) => {

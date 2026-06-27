@@ -9,12 +9,24 @@
 </head>
 <body>
 
-  <div class="container">
-    <h1>Radio Futuro</h1>
-    <p class="credits">Developed by Ignacio Fulgore Ainol</p>
-    <button id="playBtn">▶ Play</button>
-    <p id="status">Detenido</p>
-    <p id="nowPlaying"></p>
+  <div class="app">
+    <section class="player">
+      <h1>Radio Futuro</h1>
+      <p class="credits">Developed by Ignacio Fulgore Ainol</p>
+      <button id="playBtn">▶ Play</button>
+      <p id="status">Detenido</p>
+      <p id="nowPlaying"></p>
+    </section>
+
+    <aside class="lyrics-panel">
+      <div class="lyrics-header">
+        <span>Letra</span>
+        <span id="offsetHint" class="offset-hint"></span>
+      </div>
+      <div id="lyrics" class="lyrics">
+        <div class="lyrics-message">Dale Play para ver la letra</div>
+      </div>
+    </aside>
   </div>
 
   <audio id="radio"></audio>
