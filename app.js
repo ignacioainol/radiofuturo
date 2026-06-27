@@ -3,7 +3,10 @@ const statusText = document.getElementById("status");
 const playBtn = document.getElementById("playBtn");
 const nowPlayingText = document.getElementById("nowPlaying");
 
-const STREAM_URL = "https://26663.live.streamtheworld.com/FUTURO_SC";
+// URL con redirect oficial: siempre resuelve a un servidor vivo, en vez de
+// fijar un edge concreto (que StreamTheWorld rota y provoca "Reconectando...").
+const STREAM_URL =
+  "https://playerservices.streamtheworld.com/api/livestream-redirect/FUTURO_SC.mp3";
 
 // En desarrollo local (npx serve) usamos el proxy local; en la TV / empaquetado
 // usamos el proxy desplegado en Render.
@@ -66,8 +69,20 @@ radio.addEventListener("pause", () => {
   stopMetadataPolling();
 });
 
+radio.addEventListener("playing", () => {
+  statusText.innerText = "Reproduciendo";
+});
+
 radio.addEventListener("error", () => {
-  statusText.innerText = "Error de stream";
+  const codes = {
+    1: "abortado",
+    2: "error de red",
+    3: "error de decodificación",
+    4: "formato no soportado"
+  };
+  const code = radio.error ? radio.error.code : 0;
+  statusText.innerText = "Error de stream (" + (codes[code] || code) + ")";
+  console.error("Audio error:", radio.error);
 });
 
 radio.addEventListener("stalled", () => {
