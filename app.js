@@ -4,6 +4,19 @@ const playBtn = document.getElementById("playBtn");
 const nowPlayingText = document.getElementById("nowPlaying");
 const lyricsEl = document.getElementById("lyrics");
 const offsetHint = document.getElementById("offsetHint");
+const lyricsPanel = document.getElementById("lyricsPanel");
+const lyricsToggle = document.getElementById("lyricsToggle");
+
+// Mostrar / ocultar el sidebar de letra
+function setLyricsVisible(visible) {
+  lyricsPanel.classList.toggle("collapsed", !visible);
+  lyricsToggle.classList.toggle("collapsed", !visible);
+  lyricsToggle.textContent = visible ? "›" : "‹";
+}
+
+lyricsToggle.addEventListener("click", () => {
+  setLyricsVisible(lyricsPanel.classList.contains("collapsed"));
+});
 
 // URL con redirect oficial: siempre resuelve a un servidor vivo, en vez de
 // fijar un edge concreto (que StreamTheWorld rota y provoca "Reconectando...").
@@ -29,26 +42,64 @@ let cueTimeStart = null; // ms epoch en que arrancó el tema en la emisora
 let lyricLines = []; // [{ time: segundos, text }]
 let activeIndex = -1;
 let syncTimer = null;
+let lyricsAnchor = 0; // ms en que se cargó la letra (usado en modo demo)
+
+// Si el último tema arrancó hace más de esto, no hay canción sonando ahora
+// (programa hablado o publicidad): no mostramos un tema viejo.
+const SONG_MAX_AGE_MS = 12 * 60 * 1000;
+
+// Modo demo (?demo=1): carga un tema de ejemplo para ver el karaoke aunque
+// la emisora esté en un programa sin música.
+const DEMO = new URLSearchParams(location.search).has("demo");
+let demoLoaded = false;
 
 // Retardo del stream: lo que oyes va unos segundos por detrás de la emisora.
-// Se calibra en vivo con las flechas ← → del control.
-let streamDelaySec = 8;
+// 16s es un punto de partida realista (medido en el PC); se calibra en vivo
+// con las flechas ← → y se guarda por dispositivo.
+let streamDelaySec = 16;
+try {
+  const saved = parseInt(localStorage.getItem("streamDelaySec"), 10);
+  if (!isNaN(saved)) streamDelaySec = saved;
+} catch (e) {}
 
 // --- Metadatos (título + cueTimeStart) ---
 async function updateNowPlaying() {
   try {
-    const res = await fetch(METADATA_URL);
+    const res = await fetch(METADATA_URL + "?_=" + Date.now(), { cache: "no-store" });
     const data = await res.json();
 
-    if (data.title) {
-      nowPlayingText.innerText = "Ahora suena: " + data.title;
-    }
-    cueTimeStart = data.cueTimeStart || null;
+    const fresh =
+      data.song &&
+      data.cueTimeStart &&
+      Date.now() - data.cueTimeStart < SONG_MAX_AGE_MS;
 
-    const key = (data.artist || "") + " - " + (data.song || "");
-    if (data.song && key !== currentSongKey) {
-      currentSongKey = key;
-      loadLyrics(data.artist || "", data.song || "");
+    if (fresh) {
+      // Hay una canción sonando ahora
+      cueTimeStart = data.cueTimeStart;
+      nowPlayingText.innerText = "Ahora suena: " + (data.title || "");
+      const key = (data.artist || "") + " - " + (data.song || "");
+      if (key !== currentSongKey) {
+        currentSongKey = key;
+        loadLyrics(data.artist || "", data.song || "");
+      }
+      return;
+    }
+
+    // No hay canción ahora (programa hablado / publicidad)
+    cueTimeStart = null;
+    if (DEMO) {
+      if (!demoLoaded) {
+        demoLoaded = true;
+        currentSongKey = "DEMO";
+        nowPlayingText.innerText = "DEMO · The Cult - Lucifer";
+        loadLyrics("The Cult", "Lucifer");
+      }
+    } else {
+      nowPlayingText.innerText = "En vivo · sin música ahora";
+      if (currentSongKey !== "") {
+        currentSongKey = "";
+        setLyricsMessage("Esperando la próxima canción…");
+      }
     }
   } catch (err) {
     console.error("Metadata error:", err);
@@ -80,8 +131,10 @@ async function loadLyrics(artist, song) {
       "?artist=" +
       encodeURIComponent(artist) +
       "&track=" +
-      encodeURIComponent(song);
-    const res = await fetch(url);
+      encodeURIComponent(song) +
+      "&_=" +
+      Date.now();
+    const res = await fetch(url, { cache: "no-store" });
     const data = await res.json();
 
     // Si cambió la canción mientras buscábamos, descartamos esta respuesta
@@ -137,6 +190,11 @@ function renderSynced() {
     lyricsEl.appendChild(div);
   });
   lyricsEl.scrollTop = 0;
+  // En demo arrancamos 3s antes de la primera línea para no esperar la intro
+  lyricsAnchor =
+    DEMO && lyricLines.length
+      ? Date.now() - Math.max(0, lyricLines[0].time - 3) * 1000
+      : Date.now();
   startSync();
 }
 
@@ -177,10 +235,17 @@ function stopSync() {
   }
 }
 
-function tickSync() {
-  if (!cueTimeStart || !lyricLines.length) return;
+// Posición dentro del tema (segundos). Usa cueTimeStart real si es plausible;
+// si el feed está parado/sin dato, se ancla al momento en que cargó la letra.
+function songPositionSec() {
+  if (cueTimeStart) return (Date.now() - cueTimeStart) / 1000 - streamDelaySec;
+  return (Date.now() - lyricsAnchor) / 1000; // modo demo (anclado a la carga)
+}
 
-  const pos = (Date.now() - cueTimeStart) / 1000 - streamDelaySec;
+function tickSync() {
+  if (!lyricLines.length) return;
+
+  const pos = songPositionSec();
 
   let idx = -1;
   for (let i = 0; i < lyricLines.length; i++) {
@@ -217,23 +282,30 @@ function smoothScrollTo(el, to, duration) {
   requestAnimationFrame(step);
 }
 
-// --- Calibración del offset con las flechas ← → del control ---
+// --- Calibración del offset con las flechas ← → (↑ ↓ = pasos de 5s) ---
 function flashOffset() {
-  offsetHint.textContent = "offset " + streamDelaySec + "s";
+  offsetHint.textContent = "retraso " + streamDelaySec + "s";
   offsetHint.classList.add("show");
+  try {
+    localStorage.setItem("streamDelaySec", streamDelaySec);
+  } catch (e) {}
   clearTimeout(flashOffset._t);
-  flashOffset._t = setTimeout(() => offsetHint.classList.remove("show"), 1500);
+  flashOffset._t = setTimeout(() => offsetHint.classList.remove("show"), 2500);
+}
+
+function adjustDelay(delta) {
+  streamDelaySec = Math.max(0, streamDelaySec + delta);
+  flashOffset();
 }
 
 document.addEventListener("keydown", (e) => {
   const code = e.keyCode;
-  if (e.key === "ArrowLeft" || code === 37) {
-    streamDelaySec += 1; // letra adelantada -> más retraso
-    flashOffset();
-  } else if (e.key === "ArrowRight" || code === 39) {
-    streamDelaySec = Math.max(0, streamDelaySec - 1); // letra atrasada -> menos retraso
-    flashOffset();
-  }
+  if (e.key === "ArrowLeft" || code === 37) adjustDelay(1); // letra adelantada -> más retraso
+  else if (e.key === "ArrowRight" || code === 39) adjustDelay(-1); // letra atrasada -> menos retraso
+  else if (e.key === "ArrowUp" || code === 38) adjustDelay(5); // salto grueso
+  else if (e.key === "ArrowDown" || code === 40) adjustDelay(-5);
+  else return;
+  e.preventDefault();
 });
 
 // --- Controles de reproducción ---

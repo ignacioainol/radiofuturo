@@ -9,15 +9,14 @@ body {
   font-family: Arial, sans-serif;
 }
 
-/* Layout de dos columnas: player a la izquierda, letra a la derecha */
+/* El player ocupa toda la pantalla; la letra es un sidebar superpuesto */
 .app {
-  display: flex;
   height: 100vh;
   width: 100vw;
 }
 
 .player {
-  flex: 1;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -59,15 +58,52 @@ button {
   min-height: 32px;
 }
 
-/* Panel de letra estilo Spotify */
+/* Sidebar de letra estilo Spotify (deslizable) */
 .lyrics-panel {
-  width: 42%;
-  max-width: 720px;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 460px;
+  height: 100vh;
   background: linear-gradient(160deg, #1e1e1e 0%, #0d0d0d 100%);
   border-left: 1px solid #222;
   display: flex;
   flex-direction: column;
   padding: 32px 0 32px 40px;
+  transform: translateX(0);
+  transition: transform 0.35s ease;
+  z-index: 10;
+}
+
+.lyrics-panel.collapsed {
+  transform: translateX(100%);
+}
+
+/* Botón-flecha para mostrar/ocultar; se queda pegado al borde del sidebar */
+.lyrics-toggle {
+  position: fixed;
+  top: 50%;
+  right: 460px;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  padding: 0;
+  color: #00ff00;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  cursor: pointer;
+  transition: right 0.35s ease;
+  z-index: 11;
+}
+
+.lyrics-toggle.collapsed {
+  right: 0;
 }
 
 .lyrics-header {

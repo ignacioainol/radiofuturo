@@ -17,17 +17,19 @@
       <p id="status">Detenido</p>
       <p id="nowPlaying"></p>
     </section>
-
-    <aside class="lyrics-panel">
-      <div class="lyrics-header">
-        <span>Letra</span>
-        <span id="offsetHint" class="offset-hint"></span>
-      </div>
-      <div id="lyrics" class="lyrics">
-        <div class="lyrics-message">Dale Play para ver la letra</div>
-      </div>
-    </aside>
   </div>
+
+  <button id="lyricsToggle" class="lyrics-toggle" aria-label="Mostrar u ocultar la letra">›</button>
+
+  <aside id="lyricsPanel" class="lyrics-panel">
+    <div class="lyrics-header">
+      <span>Letra</span>
+      <span id="offsetHint" class="offset-hint"></span>
+    </div>
+    <div id="lyrics" class="lyrics">
+      <div class="lyrics-message">Dale Play para ver la letra</div>
+    </div>
+  </aside>
 
   <audio id="radio"></audio>
 

@@ -8,6 +8,7 @@ app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Icy-Metadata, Range, Content-Type");
   res.header("Access-Control-Expose-Headers", "Icy-MetaInt, Icy-Br, Icy-Description, Icy-Genre, Icy-Name, Icy-Url");
+  res.header("Cache-Control", "no-store"); // los metadatos cambian a cada rato
   if (req.method === "OPTIONS") return res.sendStatus(200);
   next();
 });
